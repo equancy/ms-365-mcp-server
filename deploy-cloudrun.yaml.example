@@ -1,0 +1,79 @@
+# Every TODO_ below must be filled before the first deploy except
+# TODO_CLOUD_RUN_SERVICE_URL, which is only known afterwards. See DEPLOY.md.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ms-365-mcp-server
+  labels:
+    cloud.googleapis.com/location: REGION
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Sign-in has two legs (browser, then client) sharing in-memory PKCE state:
+        #   maxScale > 1 -> the two legs can land on different instances
+        #   minScale = 0 -> the instance can be reclaimed mid-sign-in
+        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/maxScale: '1'
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: 'true'
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/mcp-servers/ms-365-mcp-server:latest
+          ports:
+            - containerPort: 8000
+          args:
+            - --http
+            - 0.0.0.0:8000
+            - --org-mode
+            - --no-dynamic-registration
+            # TODO_ALLOWED_SCOPES: effectivePermissions from DEPLOY.md 1.1,
+            # identical to the Delegated permissions in Entra.
+            - --allowed-scopes
+            - "User.Read Files.Read Sites.Selected"
+            # Recommended for a first rollout: refuses every write operation
+            # (send, create, update, delete) regardless of granted scopes.
+            # - --read-only
+
+          env:
+            # --- Microsoft Entra application ---
+            - name: MS365_MCP_CLIENT_ID
+              value: TODO_ENTRA_APPLICATION_CLIENT_ID
+            - name: MS365_MCP_TENANT_ID
+              # The Equancy tenant GUID. Do NOT leave this as "common", which
+              # would let any Microsoft account in the world attempt to sign in.
+              value: TODO_ENTRA_TENANT_ID
+            # --- Public identity of this service ---
+            - name: MS365_MCP_PUBLIC_URL
+              # Only known after the first deploy. Fill it later and deploy again.
+              value: TODO_CLOUD_RUN_SERVICE_URL
+            - name: MS365_MCP_ALLOWED_REDIRECT_URIS
+              # Exact-match allowlist for the redirect_uri this server forwards
+              # to Entra (open-redirect defence).
+              # This is the MCP *client's* callback, not this service's URL.
+              value: https://claude.ai/api/mcp/auth_callback
+            - name: MS365_MCP_CORS_ORIGIN
+              value: https://claude.ai
+            # --- Secret ---
+            - name: MS365_MCP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ms365-mcp-client-secret
+                  key: latest
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          startupProbe:
+            timeoutSeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+            tcpSocket:
+              port: 8000
+  traffic:
+    - percent: 100
+      latestRevision: true

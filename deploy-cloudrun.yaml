@@ -1,0 +1,59 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ms-365-mcp-server
+  labels:
+    cloud.googleapis.com/location: europe-west1
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/maxScale: '1'
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: 'true'
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: europe-west1-docker.pkg.dev/PROJECT_ID/mcp-servers/ms-365-mcp-server:latest
+          ports:
+            - containerPort: 8000
+          args:
+            - --http
+            - 0.0.0.0:8000
+            - --org-mode
+            - --no-dynamic-registration
+            - --allowed-scopes
+            - "User.Read Files.Read Sites.Selected"
+          env:
+            - name: MS365_MCP_CLIENT_ID
+              value: TODO_ENTRA_APPLICATION_CLIENT_ID
+            - name: MS365_MCP_TENANT_ID
+              value: TODO_ENTRA_TENANT_ID
+            - name: MS365_MCP_PUBLIC_URL
+              value: TODO_CLOUD_RUN_SERVICE_URL
+            - name: MS365_MCP_ALLOWED_REDIRECT_URIS
+              value: https://claude.ai/api/mcp/auth_callback
+            - name: MS365_MCP_CORS_ORIGIN
+              value: https://claude.ai
+            - name: MS365_MCP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ms365-mcp-client-secret
+                  key: latest
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          startupProbe:
+            timeoutSeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+            tcpSocket:
+              port: 8000
+  traffic:
+    - percent: 100
+      latestRevision: true
