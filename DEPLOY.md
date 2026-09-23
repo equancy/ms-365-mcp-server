@@ -51,12 +51,17 @@ node dist/index.js --org-mode --list-permissions
 
 # Narrow list, with fewer tools
 node dist/index.js --org-mode \
-  --allowed-scopes "User.Read Files.Read Sites.Selected" \
+  --allowed-scopes "User.Read Files.Read.All Sites.Read.All" \
   --list-permissions
 ```
 
 Read `effectivePermissions` (what to request) and `disabledTools` (what you
 give up). Then put the value of `effectivePermissions` in the YAML.
+
+Chosen set: `User.Read Files.Read.All Sites.Read.All` (read-only). It lets a
+user find and download any SharePoint or shared OneDrive file **they can
+already open**. `.All` means "all files this user has access to", not the
+whole tenant: restricted folders stay restricted.
 
 ### 1.2 Register the app
 
@@ -69,6 +74,10 @@ Azure Portal → Microsoft Entra ID → App registrations → New registration.
 | Redirect URI, platform **Web** | `https://claude.ai/api/mcp/auth_callback` |
 | API permissions | Microsoft Graph → **Delegated** → the list from 1.1 |
 | Certificates & secrets | create one client secret, copy the value now |
+
+> Add the **Delegated** permissions (limited to the signed-in user's rights).
+> NEVER add the **Application** permissions, which gives the app every file in
+> the tenant, whatever the user's rights.
 
 > **The redirect URI is the MCP client's callback**
 > This server forwards the client's `redirect_uri` to Entra, so the

@@ -27,7 +27,7 @@ spec:
             - --org-mode
             - --no-dynamic-registration
             - --allowed-scopes
-            - "User.Read Files.Read Sites.Selected"
+            - "User.Read Files.Read.All Sites.Read.All"
           env:
             - name: MS365_MCP_CLIENT_ID
               value: TODO_ENTRA_APPLICATION_CLIENT_ID

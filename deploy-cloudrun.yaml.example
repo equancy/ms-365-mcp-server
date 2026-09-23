@@ -34,7 +34,7 @@ spec:
             # TODO_ALLOWED_SCOPES: effectivePermissions from DEPLOY.md 1.1,
             # identical to the Delegated permissions in Entra.
             - --allowed-scopes
-            - "User.Read Files.Read Sites.Selected"
+            - "User.Read Files.Read.All Sites.Read.All"
             # Recommended for a first rollout: refuses every write operation
             # (send, create, update, delete) regardless of granted scopes.
             # - --read-only
