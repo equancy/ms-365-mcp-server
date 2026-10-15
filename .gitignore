@@ -163,3 +163,6 @@ CLAUDE.md
 
 # Finder metadata files
 .DS_Store
+
+# Vim
+*.swp
